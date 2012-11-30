@@ -1,3 +1,11 @@
+/target
+/.project
+/.classpath
+/dbcopy.properties
+/dependency-reduced-pom.xml
+
+*~
+
 *.class
 
 # Package Files #
