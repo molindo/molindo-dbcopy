@@ -19,7 +19,6 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -28,6 +27,9 @@ import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.dbutils.handlers.MapListHandler;
+
+import at.molindo.dbcopy.handler.ColumnHandler;
 import at.molindo.dbcopy.handler.SimpleKeyedHandler;
 import at.molindo.dbcopy.source.DataSource;
 import at.molindo.dbcopy.source.DataSourceRole;
@@ -38,6 +40,7 @@ import at.molindo.dbcopy.task.ConnectionExecutorService;
 import at.molindo.dbcopy.util.SqlFunction;
 import at.molindo.dbcopy.util.Utils;
 import at.molindo.utils.collections.CollectionUtils;
+import at.molindo.utils.collections.ListMap;
 import at.molindo.utils.data.Function2;
 import at.molindo.utils.data.ObjectUtils;
 
@@ -111,63 +114,50 @@ public class Database {
 		ResultSet rs = meta.getTables(catalog, null, null, null);
 		try {
 			while (rs.next()) {
-				String schemaName = rs.getString("TABLE_SCHEM"); // null
 				String tableName = rs.getString("TABLE_NAME");
 
-				// primary key
-				List<String> pkColumns;
-				ResultSet pk = meta.getPrimaryKeys(catalog, schemaName, tableName);
-				try {
-					pkColumns = new ArrayList<String>(pk.getMetaData().getColumnCount());
-					while (pk.next()) {
-						// not in KEY_SEQ order
-						CollectionUtils.set(pkColumns, pk.getInt("KEY_SEQ") - 1, pk.getString("COLUMN_NAME"));
-					}
-					if (pkColumns.contains(null)) {
-						throw new IllegalStateException("missing key sequence in table " + tableName);
-					}
-				} finally {
-					Utils.close(pk);
-				}
+				Table.Builder table = Table.builder(tableName);
 
 				// columns
-				List<String> columns;
-				ResultSet cols = meta.getColumns(catalog, schemaName, tableName, null);
-				boolean hasStringPkColumn = false;
-				try {
-					columns = new ArrayList<String>(cols.getMetaData().getColumnCount());
-					while (cols.next()) {
-						String column = cols.getString("COLUMN_NAME");
-						columns.add(column);
-
-						int pkSeq = pkColumns.indexOf(column);
-						if (pkSeq >= 0) {
-							hasStringPkColumn |= Utils.isStringType(cols.getInt("DATA_TYPE"));
-						}
-					}
-				} finally {
-					Utils.close(cols);
-				}
-
-				Map<String, String> pkColumnCollations;
-				if (hasStringPkColumn) {
-					log.debug("string PK column in table " + tableName);
-
-					String collationsQuery = "select COLUMN_NAME,COLLATION_NAME from information_schema.COLUMNS where TABLE_SCHEMA=? and TABLE_NAME=? and COLLATION_NAME is not null and COLLATION_NAME not like '%\\_bin'";
-					pkColumnCollations = Utils.executePrepared(connection, collationsQuery,
-							SimpleKeyedHandler.STRING_STRING, catalog, tableName);
-
-				} else {
-					pkColumnCollations = new HashMap<String, String>();
-				}
-
+				String columnsQuery = "select COLUMN_NAME,COLLATION_NAME from information_schema.COLUMNS where TABLE_SCHEMA=? and TABLE_NAME=? order by ORDINAL_POSITION";
+				Map<String, Column> columns = Utils.executePrepared(connection, columnsQuery, new ColumnHandler(),
+						catalog, tableName);
 				if (columns.isEmpty()) {
 					throw new IllegalStateException("table (" + tableName + ") without columns?");
-				} else if (pkColumns.isEmpty()) {
-					// FIXME
+				}
+				table.addColumns(columns.values());
+
+				// unique keys
+				String uniqueKeysQuery = "show keys from `" + tableName + "` in `" + catalog
+						+ "` where `Non_unique` = 0 and `Null` = ''";
+				List<Map<String, Object>> uniqueKeyColumns = Utils.executePrepared(connection, uniqueKeysQuery,
+						new MapListHandler());
+				ListMap<String, Column> uniqeKeys = new ListMap<String, Column>();
+				for (Map<String, Object> keyColumn : uniqueKeyColumns) {
+					String name = (String) keyColumn.get("INDEX_NAME");
+					String columnName = (String) keyColumn.get("COLUMN_NAME");
+
+					if (name == null) {
+						throw new IllegalStateException("KEY_NAME must not be null");
+					}
+					if (columnName == null) {
+						throw new IllegalStateException("COLUMN_NAME must not be null");
+					}
+
+					Column column = columns.get(columnName);
+					if (column == null) {
+						throw new IllegalStateException("COLUMN_NAME unknown: " + columnName);
+					}
+
+					uniqeKeys.put(name, column);
+				}
+				for (Map.Entry<String, List<Column>> e : uniqeKeys.entrySet()) {
+					table.addUniqueKey(e.getKey(), e.getValue());
+				}
+				if (uniqeKeys.isEmpty()) {
 					log.warn("table without primary key not supported: " + tableName);
 				} else {
-					tables.put(tableName, new Table(tableName, columns, pkColumns, pkColumnCollations));
+					tables.put(tableName, table.build());
 				}
 			}
 		} finally {

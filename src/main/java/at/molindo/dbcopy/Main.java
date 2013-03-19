@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import at.molindo.dbcopy.task.CompareTableTask;
 import at.molindo.dbcopy.util.DbcopyProperties;
 import at.molindo.dbcopy.util.DbcopyProperties.DbProperties;
+import at.molindo.dbcopy.util.DbcopyProperties.QueryTask;
 import at.molindo.dbcopy.util.DbcopyProperties.TableTaksProperties;
 import at.molindo.mysqlcollations.lib.CollationComparator;
 import at.molindo.utils.data.StringUtils;
@@ -54,7 +55,9 @@ public class Main {
 		Set<String> available = source.getTableNames();
 		available.retainAll(target.getTableNames());
 
-		log.info("available tables: " + available);
+		if (log.isDebugEnabled()) {
+			log.debug("available tables: " + available);
+		}
 
 		Set<String> tables = new HashSet<String>();
 
@@ -110,8 +113,6 @@ public class Main {
 			}
 		}
 
-		log.info("creating tasks for tables: " + tables);
-
 		return tables;
 	}
 
@@ -144,10 +145,25 @@ public class Main {
 
 		ExecutorService executor = Executors.newFixedThreadPool(props.getSource().getPoolSize());
 
-		Set<String> tables = getTableNames(source, target, props.getTableTask());
+		Set<String> tables = getTableNames(source, target, props.getTableTasks());
+		if (!tables.isEmpty()) {
+			log.info("creating tasks for tables: " + tables);
+			for (String table : tables) {
+				executor.execute(new CompareTableTask(table, source, target, props));
+			}
+		}
 
-		for (String table : tables) {
-			executor.execute(new CompareTableTask(table, source, target));
+		Map<String, QueryTask> tasks = props.getQueryTasks().getTasks();
+		if (!tasks.isEmpty()) {
+			log.info("creating tasks for queries: " + tasks.keySet());
+			for (QueryTask task : tasks.values()) {
+
+				Query query = new Query(task.getName(), task.getQuery());
+				Table table = target.getTable(task.getTable());
+				Insertable insertable = table.getIndex(task.getIndex());
+
+				executor.execute(new CompareTableTask(query, insertable, source, target, props));
+			}
 		}
 
 		executor.shutdown();

@@ -13,20 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package at.molindo.dbcopy.task;
+package at.molindo.dbcopy.handler;
 
-import java.util.concurrent.BlockingQueue;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
-import at.molindo.dbcopy.Table;
+import at.molindo.dbcopy.Column;
 
-public class TableReader extends QueryReader {
+/**
+ * a list of columns, expecting rows:
+ * 
+ * <ol> <li>name</li> <li>collation</li> </ol>
+ */
+public class ColumnHandler extends AbstractLinkedKeyedHandler<String, Column> {
 
-	@SuppressWarnings("unused")
-	private final Table _table;
-
-	public TableReader(Table table, BlockingQueue<Object[]> queue) {
-		super(table.getOrderedSelect(), queue);
-		_table = table;
+	@Override
+	protected String createKey(ResultSet rs) throws SQLException {
+		return rs.getString(1);
 	}
 
+	@Override
+	protected Column createRow(ResultSet rs) throws SQLException {
+		return new Column(rs.getString(1), rs.getString(2));
+	}
 }

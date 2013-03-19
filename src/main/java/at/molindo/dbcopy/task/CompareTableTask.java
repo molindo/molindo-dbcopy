@@ -15,18 +15,21 @@
  */
 package at.molindo.dbcopy.task;
 
-import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import at.molindo.dbcopy.Column;
 import at.molindo.dbcopy.Database;
-import at.molindo.dbcopy.Table;
+import at.molindo.dbcopy.Insertable;
+import at.molindo.dbcopy.Selectable;
 import at.molindo.dbcopy.operation.Delete;
 import at.molindo.dbcopy.operation.Insert;
 import at.molindo.dbcopy.operation.Operation;
 import at.molindo.dbcopy.operation.Update;
+import at.molindo.dbcopy.util.DbcopyProperties;
+import at.molindo.dbcopy.util.Equals;
 import at.molindo.dbcopy.util.NaturalRowComparator;
 
 public class CompareTableTask implements Runnable {
@@ -36,50 +39,96 @@ public class CompareTableTask implements Runnable {
 	private static final boolean CHECK_ORDER = true;
 	private static final boolean FAIL_ON_WRONG_ORDER = true;
 
-	private final Table _sourceTable;
-	private final String _targetTableName;
+	private final Selectable _sourceSelectable;
+	private final Insertable _targetInsertable;
 	private final Database _source;
 	private final Database _target;
+	private final boolean _dryRun;
 
-	public CompareTableTask(String tableName, Database source, Database target) {
-		this(tableName, tableName, source, target);
+	private final String _description;
+
+	public CompareTableTask(String tableName, Database source, Database target, DbcopyProperties props) {
+		this(source.getTable(tableName), tableName, source, target, props);
 	}
 
-	public CompareTableTask(String sourceTableName, String targetTableName, Database source, Database target) {
-		_sourceTable = source.getTable(sourceTableName);
-		_targetTableName = targetTableName;
+	public CompareTableTask(Selectable sourceSelectable, String targetTableName, Database source, Database target,
+			DbcopyProperties props) {
+		this(sourceSelectable, target.getTable(targetTableName), source, target, props);
+	}
+
+	public CompareTableTask(Selectable sourceSelectable, Insertable targetInsertable, Database source, Database target,
+			DbcopyProperties props) {
+
+		if (sourceSelectable == null) {
+			throw new NullPointerException("sourceSelectable");
+		}
+		if (targetInsertable == null) {
+			throw new NullPointerException("targetInsertable");
+		}
+		if (source == null) {
+			throw new NullPointerException("source");
+		}
+		if (target == null) {
+			throw new NullPointerException("target");
+		}
+		if (props == null) {
+			throw new NullPointerException("props");
+		}
+
+		_sourceSelectable = sourceSelectable;
+		_targetInsertable = targetInsertable;
 		_source = source;
 		_target = target;
+		_dryRun = props.isDryRun();
+
+		// TODO improve description
+		_description = _sourceSelectable.getName() + " with " + _targetInsertable.getName();
 	}
 
 	@Override
 	public void run() {
 		long start = System.currentTimeMillis();
-		log.info("comparing table " + _sourceTable.getName() + " with " + _targetTableName);
-
-		if (!_target.getTableNames().contains(_targetTableName)) {
-			// TODO create table
-			throw new IllegalArgumentException("target table " + _targetTableName + " does not exist");
-		}
-
-		Table targetTable = _target.getTable(_targetTableName);
+		log.info("comparing " + _description);
 
 		// sourceQ contains rows from source
 		BlockingQueue<Object[]> sourceQ = new ArrayBlockingQueue<Object[]>(1000);
-		_source.execute(new TableReader(_sourceTable, sourceQ));
+		_source.execute(new SelectReader(_sourceSelectable, sourceQ));
 
 		// targetQ contains rows from target
 		BlockingQueue<Object[]> targetQ = new ArrayBlockingQueue<Object[]>(1000);
-		_target.execute(new TableReader(targetTable, targetQ));
+		_target.execute(new SelectReader(_targetInsertable, targetQ));
 
 		// writeQ takes operations on target
 		BlockingQueue<Operation> writeQ = new ArrayBlockingQueue<Operation>(1000);
-		Future<?> writeFuture = _target.submit(new BatchWriter(targetTable, writeQ));
+		Future<?> writeFuture = _target.submit(_dryRun ? new DryWriter(_targetInsertable, writeQ) : new BatchWriter(
+				_targetInsertable, writeQ));
 
 		// comparators for both tables must be equal!
-		NaturalRowComparator comp = _sourceTable.getComparator();
+		NaturalRowComparator comp = _targetInsertable.getComparator();
 		int rows = 0;
+		int writes = 0;
 		try {
+			Object[] headerT = targetQ.take();
+			Object[] headerS = sourceQ.take();
+
+			if (headerT.length != headerS.length) {
+				throw new IllegalStateException("result sets of different size when comparing " + _description
+						+ " (target=" + headerT.length + ", source=" + headerS.length + ")");
+			}
+
+			for (int i = 0; i < headerT.length; i++) {
+				Column th = (Column) headerT[i];
+				Column sh = (Column) headerS[i];
+
+				if (!th.getName().equals(sh.getName())) {
+					throw new IllegalStateException(
+							"column labels of source and target colunn must be equal when comparing " + _description
+									+ " (target=" + th.getName() + ", source=" + sh.getName() + ")");
+				}
+			}
+
+			Equals e = new Equals(headerT, headerS);
+
 			Object[] t = targetQ.take();
 			Object[] s = sourceQ.take();
 
@@ -87,29 +136,36 @@ public class CompareTableTask implements Runnable {
 				rows++;
 				int cmp = comp.compare(t, s);
 				if (cmp == 0) {
-					if (!Arrays.equals(t, s)) {
+					if (!e.equals(t, s)) {
 						// update
 						writeQ.put(new Update(s, t));
+						writes++;
 					}
 					t = take(targetQ, t, comp);
 					s = take(sourceQ, s, comp);
 				} else if (cmp < 0) {
+
 					// t not in source
 					writeQ.put(new Delete(t));
+					writes++;
+
 					t = take(targetQ, t, comp);
 				} else if (cmp > 0) {
+
 					// s not in target
 					writeQ.put(new Insert(s));
+					writes++;
+
 					s = take(sourceQ, s, comp);
 				}
 				if (rows % 100000 == 0 && log.isDebugEnabled()) {
 					int perSecond = (int) (rows / ((System.currentTimeMillis() - start) / 1000.0));
-					log.debug("compared " + rows + " rows (" + perSecond + " per second) from "
-							+ _sourceTable.getName() + " with " + targetTable.getName());
+					log.debug("compared " + rows + " rows (" + perSecond + " rows/second, " + writes
+							+ " changes) from " + _description);
 				}
 			}
 		} catch (InterruptedException e) {
-			log.info("comparing " + _sourceTable.getName() + " with " + targetTable.getName() + " interrupted");
+			log.info("comparing " + _description + " interrupted");
 		} finally {
 			try {
 				writeQ.put(Operation.END);
@@ -122,8 +178,8 @@ public class CompareTableTask implements Runnable {
 		}
 
 		int perSecond = (int) (rows / ((System.currentTimeMillis() - start) / 1000.0));
-		log.info("finished comparing " + rows + " rows (" + perSecond + " per second) from " + _sourceTable.getName()
-				+ " with " + targetTable.getName());
+		log.info("finished comparing " + rows + " rows (" + perSecond + " rows/second, " + writes + " changes) from "
+				+ _description);
 	}
 
 	private Object[] take(BlockingQueue<Object[]> queue, Object[] prev, NaturalRowComparator comp)
@@ -132,8 +188,8 @@ public class CompareTableTask implements Runnable {
 		if (CHECK_ORDER) {
 			int cmp = comp.compare(prev, next);
 			if (cmp >= 0) {
-				String msg = "unexpected order of rows for tabels " + _sourceTable.getName() + " and "
-						+ _targetTableName + " (" + cmp + ")";
+				String msg = "unexpected order of rows for tabels " + _sourceSelectable.getName() + " and "
+						+ _targetInsertable.getName() + " (" + cmp + ")";
 				if (FAIL_ON_WRONG_ORDER) {
 					throw new RuntimeException(msg);
 				} else {

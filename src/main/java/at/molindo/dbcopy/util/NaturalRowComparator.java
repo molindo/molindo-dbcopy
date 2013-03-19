@@ -75,4 +75,10 @@ public class NaturalRowComparator implements Comparator<Object[]>, Serializable 
 		return cmp;
 	}
 
+	public int[] getIndexes() {
+		int[] indexes = new int[_indexes.length];
+		System.arraycopy(_indexes, 0, indexes, 0, indexes.length);
+		return indexes;
+	}
+
 }

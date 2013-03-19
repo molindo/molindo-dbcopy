@@ -19,20 +19,28 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Date;
 import java.util.concurrent.BlockingQueue;
 
+import at.molindo.dbcopy.Column;
+import at.molindo.dbcopy.Selectable;
 import at.molindo.dbcopy.util.Utils;
 
-public abstract class AbstractResultSetReader extends AbstractConnectionRunnable {
+public class SelectReader extends AbstractConnectionRunnable {
 
-	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AbstractResultSetReader.class);
+	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SelectReader.class);
 
+	private final Selectable _source;
 	private final BlockingQueue<Object[]> _queue;
 
-	public AbstractResultSetReader(BlockingQueue<Object[]> queue) {
+	public SelectReader(Selectable source, BlockingQueue<Object[]> queue) {
+		if (source == null) {
+			throw new NullPointerException("source");
+		}
 		if (queue == null) {
 			throw new NullPointerException("queue");
 		}
+		_source = source;
 		_queue = queue;
 	}
 
@@ -43,29 +51,44 @@ public abstract class AbstractResultSetReader extends AbstractConnectionRunnable
 
 		try {
 			java.sql.ResultSetMetaData meta = res.getMetaData();
-
 			int columns = meta.getColumnCount();
+
+			try {
+				// send header first
+				Object[] header = new Object[columns];
+				for (int i = 0; i < columns; i++) {
+					Class<?> cls = Class.forName(meta.getColumnClassName(i + 1));
+
+					/*
+					 * workaround for getColumnClassName(..) ignoring
+					 * yearIsDateType=false
+					 * 
+					 * TODO link or create bug report
+					 */
+					if (Date.class.isAssignableFrom(cls) && "YEAR".equals(meta.getColumnTypeName(i + 1))) {
+						cls = Short.class;
+					}
+
+					header[i] = new Column(meta.getColumnLabel(i + 1), cls);
+				}
+				_queue.put(header);
+			} catch (ClassNotFoundException e) {
+				throw new RuntimeException("columnClassName unknown");
+			}
 
 			while (res.next()) {
 				Object[] row = new Object[columns];
 				for (int i = 0; i < columns; i++) {
 					row[i] = res.getObject(i + 1);
 				}
-				try {
-					_queue.put(row);
-				} catch (InterruptedException e) {
-					log.info("reading '" + getQuery() + "' interrupted");
-					break;
-				}
+				_queue.put(row);
 			}
 
-			try {
-				_queue.put(Utils.END);
-			} catch (InterruptedException e) {
-				log.info("finishing '" + getQuery() + "' interrupted");
-			}
+			_queue.put(Utils.END);
+		} catch (InterruptedException e) {
+			log.info("reading '" + getQuery() + "' interrupted");
 		} finally {
-			res.close();
+			Utils.close(res);
 		}
 	}
 
@@ -77,8 +100,7 @@ public abstract class AbstractResultSetReader extends AbstractConnectionRunnable
 		return stmt.executeQuery(getQuery());
 	}
 
-	/**
-	 * @return debugging only, may be ""
-	 */
-	protected abstract String getQuery();
+	protected String getQuery() {
+		return _source.getOrderedSelect();
+	}
 }

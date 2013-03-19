@@ -18,9 +18,7 @@ package at.molindo.dbcopy.handler;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import org.apache.commons.dbutils.handlers.AbstractKeyedHandler;
-
-public class SimpleKeyedHandler<K, V> extends AbstractKeyedHandler<K, V> {
+public class SimpleKeyedHandler<K, V> extends AbstractLinkedKeyedHandler<K, V> {
 
 	public static final SimpleKeyedHandler<String, Object> STRING_OBJECT = new SimpleKeyedHandler<String, Object>();
 	public static final SimpleKeyedHandler<String, String> STRING_STRING = new SimpleKeyedHandler<String, String>();

@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
-import at.molindo.dbcopy.Table;
+import at.molindo.dbcopy.Insertable;
 import at.molindo.dbcopy.operation.Delete;
 import at.molindo.dbcopy.operation.Insert;
 import at.molindo.dbcopy.operation.Operation;
@@ -33,13 +33,13 @@ public class BatchWriter extends AbstractConnectionRunnable {
 
 	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BatchWriter.class);
 
-	private final Table _table;
+	private final Insertable _table;
 	private final BlockingQueue<Operation> _queue;
 	private final int _bulkSize;
 
 	private final List<Insert> _insertBuffer;
 
-	public BatchWriter(Table table, BlockingQueue<Operation> queue) {
+	public BatchWriter(Insertable table, BlockingQueue<Operation> queue) {
 		if (table == null) {
 			throw new NullPointerException("table");
 		}
@@ -97,6 +97,9 @@ public class BatchWriter extends AbstractConnectionRunnable {
 			executeInserts(insert, bulkInsert, _insertBuffer);
 			executeBatch(update, updatesAdded);
 			executeBatch(delete, deletesAdded);
+		} catch (SQLException e) {
+			log.warn("shutting down BatchWriter for table " + _table.getName() + " after error");
+			throw e;
 		} catch (InterruptedException e) {
 			log.warn("batch writer interrupted");
 		} finally {

@@ -13,26 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package at.molindo.dbcopy.task;
-
-import java.util.concurrent.BlockingQueue;
+package at.molindo.dbcopy;
 
 
-public class QueryReader extends AbstractResultSetReader {
+public interface Selectable {
 
-	private final String _query;
+	String getName();
 
-	public QueryReader(String query, BlockingQueue<Object[]> queue) {
-		super(queue);
-		if (query == null) {
-			throw new NullPointerException("query");
-		}
-		_query = query;
-	}
-
-	@Override
-	public final String getQuery() {
-		return _query;
-	}
+	String getOrderedSelect();
 
 }

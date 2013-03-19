@@ -20,13 +20,19 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
 
 import at.molindo.dbcopy.source.DataSourceRole;
+import at.molindo.utils.collections.IteratorUtils;
 import at.molindo.utils.collections.IteratorWrappers;
 import at.molindo.utils.data.StringUtils;
 
@@ -42,6 +48,7 @@ public class DbcopyProperties {
 	private final DbProperties _source;
 	private final DbProperties _target;
 	private final TableTaksProperties _tables;
+	private final QueryTaskProperties _queries;
 
 	public static DbcopyProperties load(@Nullable String fileName) {
 
@@ -91,6 +98,7 @@ public class DbcopyProperties {
 		_source = new DbProperties(DataSourceRole.SOURCE);
 		_target = new DbProperties(DataSourceRole.TARGET);
 		_tables = new TableTaksProperties();
+		_queries = new QueryTaskProperties();
 	}
 
 	public DbProperties getSource() {
@@ -101,12 +109,20 @@ public class DbcopyProperties {
 		return _target;
 	}
 
-	public TableTaksProperties getTableTask() {
+	public TableTaksProperties getTableTasks() {
 		return _tables;
+	}
+
+	public QueryTaskProperties getQueryTasks() {
+		return _queries;
 	}
 
 	public boolean isDisableUniqueChecks() {
 		return getBool("db.disable_unique_checks");
+	}
+
+	public boolean isDryRun() {
+		return getBool("db.dry_run", false);
 	}
 
 	public String getString(String key) throws MissingPropertyException {
@@ -115,6 +131,10 @@ public class DbcopyProperties {
 			throw new MissingPropertyException(key);
 		}
 		return p;
+	}
+
+	public String getString(String key, String defaultValue) {
+		return _props.getProperty(key, defaultValue);
 	}
 
 	public int getInt(String key) throws MissingPropertyException {
@@ -127,6 +147,10 @@ public class DbcopyProperties {
 
 	public boolean getBool(String key) throws MissingPropertyException {
 		return Boolean.parseBoolean(getString(key));
+	}
+
+	public boolean getBool(String key, boolean defaultValue) throws MissingPropertyException {
+		return Boolean.parseBoolean(getString(key, Boolean.toString(defaultValue)));
 	}
 
 	public Set<String> getSet(String key) {
@@ -190,6 +214,62 @@ public class DbcopyProperties {
 
 	}
 
+	public class QueryTaskProperties implements Iterable<QueryTask> {
+
+		private final LinkedHashMap<String, QueryTask> _tasks = new LinkedHashMap<String, DbcopyProperties.QueryTask>();
+
+		private final String _prefix = "task.queries.";
+
+		public QueryTaskProperties() {
+			for (Map.Entry<Object, Object> e : _props.entrySet()) {
+				String key = (String) e.getKey();
+				if (key.startsWith(_prefix)) {
+					String name = StringUtils.beforeFirst(key.substring(_prefix.length()), ".");
+					if (!_tasks.containsKey(name)) {
+						_tasks.put(name, new QueryTask(_prefix + name));
+					}
+				}
+			}
+		}
+
+		@Override
+		public Iterator<QueryTask> iterator() {
+			return IteratorUtils.readOnly(_tasks.values().iterator());
+		}
+
+		public Map<String, QueryTask> getTasks() {
+			return Collections.unmodifiableMap(_tasks);
+		}
+	}
+
+	public class QueryTask {
+
+		private final String _prefix;
+		private final String _name;
+
+		public QueryTask(String prefix) {
+			_prefix = StringUtils.trailing(prefix, ".");
+			_name = StringUtils.afterLast(_prefix.substring(0, _prefix.length() - 1), ".");
+		}
+
+		public String getName() {
+			return _name;
+		}
+
+		public String getQuery() {
+			return getString(_prefix + "query");
+		}
+
+		public String getTable() {
+			return getString(_prefix + "table");
+		}
+
+		@CheckForNull
+		public String getIndex() {
+			return getString(_prefix + "index", null);
+		}
+	}
+
 	public static class MissingPropertyException extends RuntimeException {
 
 		private static final long serialVersionUID = 1L;
@@ -198,4 +278,5 @@ public class DbcopyProperties {
 			super("missing property: " + key);
 		}
 	}
+
 }
