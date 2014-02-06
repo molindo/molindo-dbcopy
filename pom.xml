@@ -6,10 +6,9 @@
 	<parent>
 		<groupId>at.molindo</groupId>
 		<artifactId>molindo-oss-pom</artifactId>
-		<version>2</version>
+		<version>4</version>
 	</parent>
 
-	<groupId>at.molindo</groupId>
 	<artifactId>dbcopy</artifactId>
 	<version>0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
@@ -19,6 +18,15 @@
 
 	<build>
 		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<!-- use correct java.sql.Connection version -->
+					<source>1.7</source>
+					<target>1.7</target>
+					<debugLevel>lines,vars</debugLevel>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
@@ -46,7 +54,7 @@
 		<dependency>
 			<groupId>at.molindo</groupId>
 			<artifactId>molindo-utils</artifactId>
-			<version>1.0-SNAPSHOT</version>
+			<version>1.1.0</version>
 		</dependency>
 		<dependency>
 			<groupId>at.molindo</groupId>

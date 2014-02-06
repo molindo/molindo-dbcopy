@@ -149,7 +149,7 @@ public class Database {
 						throw new IllegalStateException("COLUMN_NAME unknown: " + columnName);
 					}
 
-					uniqeKeys.put(name, column);
+					uniqeKeys.add(name, column);
 				}
 				for (Map.Entry<String, List<Column>> e : uniqeKeys.entrySet()) {
 					table.addUniqueKey(e.getKey(), e.getValue());

@@ -32,6 +32,7 @@ import java.sql.Statement;
 import java.sql.Struct;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.Executor;
 
 public class ConnectionWrapper implements Connection {
 
@@ -292,6 +293,33 @@ public class ConnectionWrapper implements Connection {
 	@Override
 	public Struct createStruct(String typeName, Object[] attributes) throws SQLException {
 		return _wrapped.createStruct(typeName, attributes);
+	}
+
+	// Java7 additions
+
+	@Override
+	public void setSchema(String schema) throws SQLException {
+		_wrapped.setSchema(schema);
+	}
+
+	@Override
+	public String getSchema() throws SQLException {
+		return _wrapped.getSchema();
+	}
+
+	@Override
+	public void abort(Executor executor) throws SQLException {
+		_wrapped.abort(executor);
+	}
+
+	@Override
+	public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
+		_wrapped.setNetworkTimeout(executor, milliseconds);
+	}
+
+	@Override
+	public int getNetworkTimeout() throws SQLException {
+		return _wrapped.getNetworkTimeout();
 	}
 
 }
