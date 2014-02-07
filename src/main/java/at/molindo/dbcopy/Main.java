@@ -29,7 +29,7 @@ import at.molindo.dbcopy.util.DbcopyProperties;
 import at.molindo.dbcopy.util.DbcopyProperties.DbProperties;
 import at.molindo.dbcopy.util.DbcopyProperties.QueryTask;
 import at.molindo.dbcopy.util.DbcopyProperties.TableTaksProperties;
-import at.molindo.mysqlcollations.lib.CollationComparator;
+import at.molindo.mysqlcollations.lib.Collation;
 import at.molindo.utils.data.StringUtils;
 import at.molindo.utils.properties.SystemProperty;
 
@@ -47,7 +47,7 @@ public class Main {
 				throw new IllegalStateException("can't create temporary directory: " + tmpDir.getAbsolutePath());
 			}
 		}
-		CollationComparator.setLibraryDirectoryName(tmpDir.getAbsolutePath());
+		Collation.setLibraryDirectoryName(tmpDir.getAbsolutePath());
 	}
 
 	private static Set<String> getTableNames(Database source, Database target, TableTaksProperties props) {

@@ -59,7 +59,7 @@
 		<dependency>
 			<groupId>at.molindo</groupId>
 			<artifactId>molindo-mysql-collations-lib</artifactId>
-			<version>0.1-SNAPSHOT</version>
+			<version>0.1.0</version>
 		</dependency>
 
 		<dependency>
@@ -71,7 +71,7 @@
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
-			<version>5.1.21</version>
+			<version>5.1.28</version>
 		</dependency>
 
 		<dependency>

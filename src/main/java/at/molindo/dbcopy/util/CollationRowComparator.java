@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import at.molindo.mysqlcollations.lib.CollationComparator;
+import at.molindo.mysqlcollations.lib.Collation;
 import at.molindo.utils.collections.CollectionUtils;
 
 public class CollationRowComparator extends NaturalRowComparator {
@@ -32,7 +32,7 @@ public class CollationRowComparator extends NaturalRowComparator {
 	private final List<Comparator<String>> _collators;
 
 	static Comparator<String> newComparator(String collation) {
-		return CollationComparator.comparator(collation);
+		return Collation.get(collation);
 	}
 
 	public CollationRowComparator(int[] indexes, String[] collations) {
