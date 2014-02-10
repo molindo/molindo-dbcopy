@@ -26,6 +26,13 @@ import at.molindo.dbcopy.Column;
 import at.molindo.dbcopy.Selectable;
 import at.molindo.dbcopy.util.Utils;
 
+/**
+ * a {@link Runnable} implementation that reads rows from a {@link Selectable}
+ * (using {@link Selectable#getOrderedSelect()} and submits them to a
+ * {@link BlockingQueue}, preceded by the header (an Object[] of {@link Column}
+ * s) and succeeded by {@link Utils#END}. It uses a MySQL streaming resultset to
+ * do so.
+ */
 public class SelectReader extends AbstractConnectionRunnable {
 
 	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SelectReader.class);
@@ -93,7 +100,13 @@ public class SelectReader extends AbstractConnectionRunnable {
 	}
 
 	protected ResultSet executeQuery(Connection connection) throws SQLException {
-		// streaming resultset
+		/*
+		 * MySQL streaming resultset:
+		 * "The combination of a forward-only, read-only result set, with a fetch size of Integer.MIN_VALUE serves as a signal to the driver to stream result sets row-by-row."
+		 * 
+		 * http://dev.mysql.com/doc/connector-j/en/connector-j-reference-
+		 * implementation-notes.html
+		 */
 		Statement stmt = connection.prepareStatement(getQuery(), ResultSet.TYPE_FORWARD_ONLY,
 				ResultSet.CONCUR_READ_ONLY);
 		stmt.setFetchSize(Integer.MIN_VALUE);

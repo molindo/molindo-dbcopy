@@ -33,6 +33,10 @@ import at.molindo.utils.collections.IteratorUtils;
 import at.molindo.utils.data.Function;
 import at.molindo.utils.data.StringUtils;
 
+/**
+ * A Table is a collection of metadata for a table in a {@link Database}. It
+ * implements {@link Insertable}. (read-only)
+ */
 public class Table implements Insertable {
 	private static final int DEFAULT_BULK_SIZE = 5000;
 
@@ -41,7 +45,7 @@ public class Table implements Insertable {
 	private final String _name;
 	private final String[] _columns;
 	private final Map<String, UniqueKey> _uniquKeys;
-	private UniqueKey _primaryKey;
+	private final UniqueKey _primaryKey;
 
 	private final int _bulkSize = DEFAULT_BULK_SIZE;
 

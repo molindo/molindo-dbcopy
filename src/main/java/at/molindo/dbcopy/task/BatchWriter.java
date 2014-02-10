@@ -23,12 +23,21 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
 import at.molindo.dbcopy.Insertable;
+import at.molindo.dbcopy.Table;
 import at.molindo.dbcopy.operation.Delete;
 import at.molindo.dbcopy.operation.Insert;
 import at.molindo.dbcopy.operation.Operation;
 import at.molindo.dbcopy.operation.Update;
 import at.molindo.dbcopy.util.Utils;
 
+import com.mysql.jdbc.Statement;
+
+/**
+ * A {@link Runnable} that writes entries from a {@link BlockingQueue} to an
+ * {@link Insertable} (typically a {@link Table}) until it receives
+ * {@link Utils#END}. Operations are batched. Either using
+ * {@link Statement#addBatch(String)} or {@link Insertable#getBulkInsertQuery()}
+ */
 public class BatchWriter extends AbstractConnectionRunnable {
 
 	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BatchWriter.class);

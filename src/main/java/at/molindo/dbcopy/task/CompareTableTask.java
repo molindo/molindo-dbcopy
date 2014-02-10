@@ -31,7 +31,14 @@ import at.molindo.dbcopy.operation.Update;
 import at.molindo.dbcopy.util.DbcopyProperties;
 import at.molindo.dbcopy.util.Equals;
 import at.molindo.dbcopy.util.NaturalRowComparator;
+import at.molindo.dbcopy.util.Utils;
 
+/**
+ * A {@link Runnable} implementation that compares rows retrieved in natural
+ * order from a {@link Selectable} and an {@link Insertable} (using
+ * {@link SelectReader}s) and submits {@link Operation}s to a {@link DryWriter}
+ * (dryRun=true) or a {@link BatchWriter} (dryRun=false)
+ */
 public class CompareTableTask implements Runnable {
 
 	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CompareTableTask.class);
@@ -132,7 +139,7 @@ public class CompareTableTask implements Runnable {
 			Object[] t = targetQ.take();
 			Object[] s = sourceQ.take();
 
-			while (t.length != 0 || s.length != 0) {
+			while (t != Utils.END || s != Utils.END) {
 				rows++;
 				int cmp = comp.compare(t, s);
 				if (cmp == 0) {

@@ -29,6 +29,14 @@ import at.molindo.utils.collections.ArrayUtils;
 import at.molindo.utils.collections.CollectionUtils;
 import at.molindo.utils.data.Function;
 
+/**
+ * Allows synchronizing of reads across all connections in pool by
+ * 
+ * <ol><li>Locking tables for reading on all pooled connections</li><li>Starting
+ * a transaction on all pooled connections</li><li>Unlocking tables on all
+ * pooled connections</li><li>Perform work</li><li>Rollback transactions on all
+ * pooled connections</li></ol>
+ */
 public class SynchronizedReadOnlyConnectionPool extends DefaultConnectionPool implements DataSource {
 
 	private String[] _synchonized;

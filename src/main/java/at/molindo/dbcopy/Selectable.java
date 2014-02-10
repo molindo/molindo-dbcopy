@@ -15,11 +15,17 @@
  */
 package at.molindo.dbcopy;
 
-
 public interface Selectable {
 
+	/**
+	 * @return a unique name for this Selectable
+	 */
 	String getName();
 
+	/**
+	 * @return a SQL query that returns rows from this Selectable in natural
+	 *         order
+	 */
 	String getOrderedSelect();
 
 }

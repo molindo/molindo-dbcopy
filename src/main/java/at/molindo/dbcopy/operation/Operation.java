@@ -15,11 +15,16 @@
  */
 package at.molindo.dbcopy.operation;
 
+import java.util.Queue;
+
 import at.molindo.dbcopy.util.Utils;
 import at.molindo.utils.collections.ArrayUtils;
 
 public abstract class Operation {
 
+	/**
+	 * indicates the end of operations in a {@link Queue}
+	 */
 	public static final Operation END = new Operation() {
 	};
 

@@ -44,6 +44,11 @@ import at.molindo.utils.collections.ListMap;
 import at.molindo.utils.data.Function2;
 import at.molindo.utils.data.ObjectUtils;
 
+/**
+ * a Database wraps a {@link DefaultConnectionPool} and a {@link Map} of
+ * {@link Table}, as well as a {@link ConnectionExecutorService} depending on
+ * the current state.
+ */
 public class Database {
 
 	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(Database.class);
@@ -53,6 +58,7 @@ public class Database {
 	private final DefaultConnectionPool _dataSource;
 	private final Map<String, Table> _tables;
 
+	// state pattern
 	private DataSourceState _state;
 
 	public Database(DataSourceRole mode, String jdbcUrl, String user, String password, int poolSize) {

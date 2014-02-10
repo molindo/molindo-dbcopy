@@ -21,6 +21,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.util.Queue;
 
 import org.apache.commons.dbutils.ResultSetHandler;
 
@@ -28,6 +29,9 @@ public final class Utils {
 
 	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(Utils.class);
 
+	/**
+	 * indicates the end of data in a {@link Queue}
+	 */
 	public static final Object[] END = new Object[0];
 
 	private Utils() {

@@ -25,7 +25,12 @@ import at.molindo.dbcopy.operation.Delete;
 import at.molindo.dbcopy.operation.Insert;
 import at.molindo.dbcopy.operation.Operation;
 import at.molindo.dbcopy.operation.Update;
+import at.molindo.dbcopy.util.Utils;
 
+/**
+ * A {@link Runnable} that writes entries from a {@link BlockingQueue} to the
+ * log until it receives {@link Utils#END}.
+ */
 public class DryWriter extends AbstractConnectionRunnable {
 
 	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DryWriter.class);

@@ -22,6 +22,12 @@ import java.util.Map;
 
 import org.apache.commons.dbutils.handlers.AbstractKeyedHandler;
 
+/**
+ * <p> <code>ResultSetHandler</code> implementation that returns a
+ * {@link LinkedHashMap}. <code>ResultSet</code> rows are converted into objects
+ * (Vs) which are then stored in a Map under the given keys (Ks) while insertion
+ * order is maintained. </p>
+ */
 public abstract class AbstractLinkedKeyedHandler<K, V> extends AbstractKeyedHandler<K, V> {
 
 	@Override

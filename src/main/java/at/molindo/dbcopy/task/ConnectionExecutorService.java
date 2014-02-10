@@ -30,8 +30,8 @@ import at.molindo.dbcopy.util.NamedThreadFactory;
 import at.molindo.dbcopy.util.Utils;
 
 /**
- * {@link ThreadPoolExecutor} using {@link DataSourceThreadFactory} which gets
- * close on termination
+ * {@link ThreadPoolExecutor} supporting {@link ConnectionRunnable}s to execute
+ * tasks with {@link Connection}s.
  */
 public class ConnectionExecutorService extends ThreadPoolExecutor {
 

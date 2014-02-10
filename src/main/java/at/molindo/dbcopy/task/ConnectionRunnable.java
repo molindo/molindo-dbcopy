@@ -17,6 +17,11 @@ package at.molindo.dbcopy.task;
 
 import java.sql.Connection;
 
+/**
+ * A {@link Runnable} that can be assigned a {@link Connection}. Implementations
+ * can assume that a {@link Connection} is available once {@link #run()} gets
+ * called.
+ */
 public interface ConnectionRunnable extends Runnable {
 
 	void setConnection(Connection c);

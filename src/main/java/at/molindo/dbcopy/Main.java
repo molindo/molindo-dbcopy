@@ -38,6 +38,7 @@ public class Main {
 	static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(Main.class);
 
 	static {
+		// configure molindo-mysql-collations-lib
 		File tmpDir = new File(SystemProperty.JAVA_IO_TMPDIR.getFile(), Main.class.getPackage().getName());
 		if (!tmpDir.isDirectory()) {
 			if (tmpDir.exists()) {
@@ -61,11 +62,13 @@ public class Main {
 
 		Set<String> tables = new HashSet<String>();
 
+		// includes first
 		Set<String> includes = props.getIncludes();
 		if (!includes.isEmpty()) {
-			// excludes first, then includes
+			// process includes from props
 			for (String include : includes) {
 				if (include.endsWith("*")) {
+					// process trailing '*'
 					include = StringUtils.beforeLast(include, "*");
 					for (String t : available) {
 						if (t.startsWith(include)) {
@@ -83,16 +86,17 @@ public class Main {
 				}
 			}
 		} else {
-			// add all, then excludes
+			// add all by default
 			if (log.isTraceEnabled()) {
 				log.trace("including all tables");
 			}
 			tables.addAll(available);
 		}
 
-		// process excludes
+		// process excludes from props
 		for (String exclude : props.getExcludes()) {
 			if (exclude.endsWith("*")) {
+				// process trailing '*'
 				exclude = StringUtils.beforeLast(exclude, "*");
 
 				Iterator<String> iter = tables.iterator();

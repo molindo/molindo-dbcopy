@@ -17,6 +17,9 @@ package at.molindo.dbcopy;
 
 import at.molindo.utils.data.StringUtils;
 
+/**
+ * A {@link Selectable} implementation based on a simple SQL Query (read-only).
+ */
 public class Query implements Selectable {
 
 	private final String _name;

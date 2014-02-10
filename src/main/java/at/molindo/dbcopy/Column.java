@@ -20,6 +20,10 @@ import javax.annotation.Nonnull;
 
 import at.molindo.utils.data.StringUtils;
 
+/**
+ * A Column is a collection of metadata for a column in a {@link Table}
+ * (read-only)
+ */
 public class Column {
 
 	private final String _name;
