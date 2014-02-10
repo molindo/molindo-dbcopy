@@ -57,6 +57,6 @@ public class CollationRowComparatorTest {
 
 		long time = System.currentTimeMillis() - start;
 
-		assertTrue("took " + time + "ms", time < 1000);
+		assertTrue("took " + time + "ms", time < 3000);
 	}
 }
