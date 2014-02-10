@@ -6,7 +6,7 @@ Incrementally compare and synchronize MySQL databases.
 Usage:
 ------
 
-    wget [$URL](https://oss.sonatype.org/service/local/repositories/snapshots/content/at/molindo/molindo-dbcopy/0.1.0-SNAPSHOT/molindo-dbcopy-0.1.0-20140210.131708-1.jar)
+    wget -O molindo-dbcopy.jar https://oss.sonatype.org/service/local/repositories/snapshots/content/at/molindo/molindo-dbcopy/0.1.0-SNAPSHOT/molindo-dbcopy-0.1.0-20140210.131708-1.jar
     cat > dbcopy.properties <<PROPS
     source.jdbc=jdbc:mysql://localhost/db1
     source.user=user1
@@ -29,8 +29,8 @@ Usage:
     task.queries.q2.table=Q2_TARGET
     PROPS
     
-    chmod +x molindo-dbcopy-*.jar
-    java -jar molindo-dbcopy-*.jar
+    chmod +x molindo-dbcopy.jar
+    java -jar molindo-dbcopy.jar
 
 Maven:
 ------
