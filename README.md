@@ -29,7 +29,6 @@ Usage:
     task.queries.q2.table=Q2_TARGET
     PROPS
     
-    chmod +x molindo-dbcopy.jar
     java -jar molindo-dbcopy.jar
 
 Maven:
